@@ -1,0 +1,27 @@
+{
+  "name": "audio-visualizer",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "output"
+  ],
+  "dependencies": {
+    "purescript-prelude": "^3.1.1",
+    "purescript-canvas": "^3.0.0",
+    "purescript-partial": "^1.2.1",
+    "purescript-integers": "^3.2.0",
+    "purescript-arrays": "^4.2.2",
+    "purescript-arraybuffer-types": "^2.0.0",
+    "jacereda/purescript-arraybuffer": "^6.0.0",
+    "purescript-webaudio": "https://github.com/newlandsvalley/purescript-webaudio.git",
+    "purescript-affjax": "^5.0.0",
+    "purescript-smolder-dom": "^2.0.0"
+  },
+  "devDependencies": {
+    "purescript-psci-support": "^3.0.0"
+  },
+  "resolutions": {
+    "purescript-arraybuffer-types": "^2.0.0"
+  }
+}
