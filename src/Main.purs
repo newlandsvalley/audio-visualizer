@@ -131,7 +131,7 @@ canvasHeight :: Number
 canvasHeight = 360.0
 
 canvasWidth :: Number
-canvasWidth = 360.0
+canvasWidth = 640.0
 
 -- | draw one vertical bar in the overall frame
 drawBar :: ∀ eff. Context2D -> Int -> Tuple Int Int ->  Eff (canvas :: CANVAS | eff) Context2D
@@ -162,6 +162,16 @@ drawVisualizerFrame drawCtx uint8Array =
       freqs = toIntArray uint8Array
       len = length freqs
       indices = range 0 len
+      rectangle =
+        { x: 0.0
+        , y: 0.0
+        , w: canvasWidth
+        , h: canvasHeight
+        }
+    -- grey the entire canvas before we paint
+    _ <- setFillStyle "#303030" drawCtx
+    _ <- fillRect drawCtx rectangle
+    -- draw each individual frequency bar
     traverse_ (drawBar drawCtx len) (zip indices freqs)
 
 -- | continuously update the display
