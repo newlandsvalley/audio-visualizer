@@ -40,6 +40,7 @@ type AudioNodes =
   { source   :: AudioBufferSourceNode
   , analyser :: AnalyserNode
   , frequencyData :: Uint8Array
+  , timeDomainData :: Uint8Array
   }
 
 type Context =
@@ -107,6 +108,7 @@ configureAudio audioCtx buffer =
     _ <- setSmoothingTimeConstant 0.8 analyser
     freqBinCount <- frequencyBinCount analyser
     frequencyData <- createUint8Buffer freqBinCount
+    timeDomainData <- createUint8Buffer freqBinCount
     dst <- destination audioCtx
     _ <- connect src gain
     _ <- connect gain analyser
@@ -114,6 +116,7 @@ configureAudio audioCtx buffer =
     pure { source : src
          , analyser : analyser
          , frequencyData : frequencyData
+         , timeDomainData : timeDomainData
          }
 
 -- | set up the 'play' button
@@ -133,9 +136,9 @@ canvasHeight = 360.0
 canvasWidth :: Number
 canvasWidth = 640.0
 
--- | draw one vertical bar in the overall frame
-drawBar :: ∀ eff. Context2D -> Int -> Tuple Int Int ->  Eff (canvas :: CANVAS | eff) Context2D
-drawBar drawCtx maxWidth (Tuple idx val) =
+-- | draw one vertical bar in the overall frame of the frequency chart
+drawFrequencyBar :: ∀ eff. Context2D -> Int -> Tuple Int Int ->  Eff (canvas :: CANVAS | eff) Context2D
+drawFrequencyBar drawCtx maxWidth (Tuple idx val) =
   let
     percent = (toNumber val) / 256.0
     height = canvasHeight * percent
@@ -154,12 +157,33 @@ drawBar drawCtx maxWidth (Tuple idx val) =
         _ <- setFillStyle fillStyle drawCtx
         fillRect drawCtx rectangle
 
+-- | draw one vertical bar in the overall frame of the time domain chart
+drawTimeDomainBar :: ∀ eff. Context2D -> Int -> Tuple Int Int ->  Eff (canvas :: CANVAS | eff) Context2D
+drawTimeDomainBar drawCtx maxWidth (Tuple idx val) =
+  let
+    percent = (toNumber val) / 256.0
+    height = canvasHeight * percent
+    offset = canvasHeight - height - 1.0
+    barWidth = canvasWidth / (toNumber maxWidth)
+    rectangle =
+      { x: (toNumber idx) + barWidth
+      , y: offset
+      , w: 1.0
+      , h: 2.0
+      }
+    in
+      do
+        _ <- setFillStyle "white" drawCtx
+        fillRect drawCtx rectangle
+
 -- | draw one frame of the visualizer
-drawVisualizerFrame :: ∀ eff. Context2D -> Uint8Array -> Eff (canvas :: CANVAS | eff) Unit
-drawVisualizerFrame drawCtx uint8Array =
+drawVisualizerFrame :: ∀ eff. Context2D -> Uint8Array -> Uint8Array -> Eff (canvas :: CANVAS | eff) Unit
+drawVisualizerFrame drawCtx freqArray timeDomainArray =
   do
     let
-      freqs = toIntArray uint8Array
+      freqs = toIntArray freqArray
+      timeDomains = toIntArray timeDomainArray
+      -- the length of both arrays is identical
       len = length freqs
       indices = range 0 len
       rectangle =
@@ -172,7 +196,9 @@ drawVisualizerFrame drawCtx uint8Array =
     _ <- setFillStyle "#303030" drawCtx
     _ <- fillRect drawCtx rectangle
     -- draw each individual frequency bar
-    traverse_ (drawBar drawCtx len) (zip indices freqs)
+    _ <- traverse_ (drawFrequencyBar drawCtx len) (zip indices freqs)
+    -- and each individual time domain bar
+    traverse_ (drawTimeDomainBar drawCtx len) (zip indices timeDomains)
 
 -- | continuously update the display
 drawVisualizer :: ∀ eff. Context -> Eff (dom :: DOM, canvas :: CANVAS, wau :: WebAudio | eff) Unit
@@ -180,7 +206,8 @@ drawVisualizer ctx =
   do
     w <- window
     _ <- getByteFrequencyData ctx.audioNodes.analyser ctx.audioNodes.frequencyData
-    _ <- drawVisualizerFrame ctx.drawCtx ctx.audioNodes.frequencyData
+    _ <- getByteTimeDomainData ctx.audioNodes.analyser ctx.audioNodes.timeDomainData
+    _ <- drawVisualizerFrame ctx.drawCtx ctx.audioNodes.frequencyData ctx.audioNodes.timeDomainData
     _ <- requestAnimationFrame (drawVisualizer ctx) w
     pure unit
 
