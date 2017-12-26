@@ -17,7 +17,7 @@ import DOM.HTML.Types (htmlDocumentToNonElementParentNode)
 import DOM.HTML.Window (document, requestAnimationFrame)
 import DOM.Node.NonElementParentNode (getElementById)
 import DOM.Node.Types (Element, ElementId(..))
-import Data.Array (length, range, zip)
+import Data.Array (range, zip)
 import Data.ArrayBuffer.ArrayBuffer (ARRAY_BUFFER)
 import Data.ArrayBuffer.Typed (toIntArray)
 import Data.ArrayBuffer.Types (Uint8Array)
@@ -104,7 +104,7 @@ configureAudio audioCtx buffer =
     analyser <- createAnalyser audioCtx
     _ <- setMinDecibels (-140.0) analyser
     _ <- setMaxDecibels 0.0 analyser
-    _ <- setFftSize 2048 analyser
+    _ <- setFftSize sampleSize analyser
     _ <- setSmoothingTimeConstant 0.8 analyser
     freqBinCount <- frequencyBinCount analyser
     frequencyData <- createUint8Buffer freqBinCount
@@ -136,15 +136,18 @@ canvasHeight = 360.0
 canvasWidth :: Number
 canvasWidth = 640.0
 
+sampleSize :: Int
+sampleSize = 2048
+
 -- | draw one vertical bar in the overall frame of the frequency chart
-drawFrequencyBar :: ∀ eff. Context2D -> Int -> Tuple Int Int ->  Eff (canvas :: CANVAS | eff) Context2D
-drawFrequencyBar drawCtx maxWidth (Tuple idx val) =
+drawFrequencyBar :: ∀ eff. Context2D -> Tuple Int Int ->  Eff (canvas :: CANVAS | eff) Context2D
+drawFrequencyBar drawCtx (Tuple idx val) =
   let
     percent = (toNumber val) / 256.0
     height = canvasHeight * percent
     offset = canvasHeight - height - 1.0
-    barWidth = canvasWidth / (toNumber maxWidth)
-    hue =  (toNumber idx) / (toNumber maxWidth) * 360.0
+    barWidth = canvasWidth / (toNumber sampleSize)
+    hue =  (toNumber idx) / (toNumber sampleSize) * 360.0
     fillStyle = "hsl(" <> (show hue) <> ", 100%, 50%)"
     rectangle =
       { x: (toNumber idx) + barWidth
@@ -158,13 +161,13 @@ drawFrequencyBar drawCtx maxWidth (Tuple idx val) =
         fillRect drawCtx rectangle
 
 -- | draw one vertical bar in the overall frame of the time domain chart
-drawTimeDomainBar :: ∀ eff. Context2D -> Int -> Tuple Int Int ->  Eff (canvas :: CANVAS | eff) Context2D
-drawTimeDomainBar drawCtx maxWidth (Tuple idx val) =
+drawTimeDomainBar :: ∀ eff. Context2D -> Tuple Int Int ->  Eff (canvas :: CANVAS | eff) Context2D
+drawTimeDomainBar drawCtx (Tuple idx val) =
   let
     percent = (toNumber val) / 256.0
     height = canvasHeight * percent
     offset = canvasHeight - height - 1.0
-    barWidth = canvasWidth / (toNumber maxWidth)
+    barWidth = canvasWidth / (toNumber sampleSize)
     rectangle =
       { x: (toNumber idx) + barWidth
       , y: offset
@@ -183,9 +186,7 @@ drawVisualizerFrame drawCtx freqArray timeDomainArray =
     let
       freqs = toIntArray freqArray
       timeDomains = toIntArray timeDomainArray
-      -- the length of both arrays is identical
-      len = length freqs
-      indices = range 0 len
+      indices = range 0 sampleSize
       rectangle =
         { x: 0.0
         , y: 0.0
@@ -196,9 +197,9 @@ drawVisualizerFrame drawCtx freqArray timeDomainArray =
     _ <- setFillStyle "#303030" drawCtx
     _ <- fillRect drawCtx rectangle
     -- draw each individual frequency bar
-    _ <- traverse_ (drawFrequencyBar drawCtx len) (zip indices freqs)
+    _ <- traverse_ (drawFrequencyBar drawCtx) (zip indices freqs)
     -- and each individual time domain bar
-    traverse_ (drawTimeDomainBar drawCtx len) (zip indices timeDomains)
+    traverse_ (drawTimeDomainBar drawCtx) (zip indices timeDomains)
 
 -- | continuously update the display
 drawVisualizer :: ∀ eff. Context -> Eff (dom :: DOM, canvas :: CANVAS, wau :: WebAudio | eff) Unit
