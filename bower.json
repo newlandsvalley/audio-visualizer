@@ -16,7 +16,8 @@
     "jacereda/purescript-arraybuffer": "^6.0.0",
     "purescript-webaudio": "https://github.com/newlandsvalley/purescript-webaudio.git",
     "purescript-affjax": "^5.0.0",
-    "purescript-smolder-dom": "^2.0.0"
+    "purescript-smolder-dom": "^2.0.0",
+    "purescript-css": "^3.3.0"
   },
   "devDependencies": {
     "purescript-psci-support": "^3.0.0"

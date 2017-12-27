@@ -1,7 +1,6 @@
 module Main where
 
-import Prelude
-
+import Prelude (($), (=<<), (/), (*), (+), (-), (<>), Unit, bind, negate, pure, show, unit, void)
 import Audio.WebAudio.AudioContext (connect, createBufferSource, currentTime, createGain, createAnalyser, decodeAudioDataAsync, destination, makeAudioContext)
 import Audio.WebAudio.Types (AudioContext, AudioBuffer, AudioBufferSourceNode, AnalyserNode, WebAudio)
 import Audio.WebAudio.AudioBufferSourceNode (setBuffer, startBufferSource)
@@ -25,15 +24,22 @@ import Data.Either (Either(..))
 import Data.Foldable (traverse_)
 import Data.HTTP.Method (Method(..))
 import Data.Int (toNumber)
-import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe(..), fromMaybe)
 import Data.Tuple (Tuple(..))
 import Graphics.Canvas (CANVAS, CanvasElement, Context2D, fillRect, setFillStyle, getContext2D, getCanvasElementById)
 import Network.HTTP.Affjax (AJAX, affjax, defaultRequest)
 import Partial.Unsafe (unsafePartial)
-import Text.Smolder.HTML (button)
+import Text.Smolder.HTML (button, div)
 import Text.Smolder.HTML.Attributes (style)
-import Text.Smolder.Markup (Markup, MarkupM, on, text, (!), (#!))
+import Text.Smolder.Markup (Markup, on, text, (!), (#!))
 import Text.Smolder.Renderer.DOM (render)
+import CSS (render, renderedInline) as CSS
+import CSS.Geometry (margin, padding)
+import CSS.Font (fontSize)
+import CSS.Size (px, em)
+import CSS.TextAlign (textAlign, center)
+import CSS.Background (backgroundColor)
+import Color.Scheme.Clrs (blue)
 
 
 type AudioNodes =
@@ -128,7 +134,8 @@ playButton ctx =
     listener =
       eventListener (\e -> play ctx)
   in
-    button #! on "click" listener $ text "play"
+    div !style divStyle $ do
+      button ! style buttonStyle #! on "click" listener $ text "play"
 
 canvasHeight :: Number
 canvasHeight = 360.0
@@ -235,3 +242,18 @@ play ctx =
     _ <- startBufferSource now ctx.audioNodes.source
     _ <- drawVisualizer ctx
     pure unit
+
+divStyle :: String
+divStyle =
+  fromMaybe "" $
+    CSS.renderedInline $ CSS.render do
+      textAlign center
+
+buttonStyle :: String
+buttonStyle =
+  fromMaybe "" $
+    CSS.renderedInline $ CSS.render do
+      _ <- margin (px 10.0) (px 0.0) (px 0.0) (px 0.0)
+      _ <- padding (px 5.0) (px 5.0) (px 5.0) (px 5.0)
+      _ <- fontSize (em 1.5)
+      backgroundColor blue
