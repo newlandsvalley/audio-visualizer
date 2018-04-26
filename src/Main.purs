@@ -1,8 +1,8 @@
 module Main where
 
 import Prelude (($), (=<<), (/), (*), (+), (-), (<>), Unit, bind, negate, pure, show, unit, void)
-import Audio.WebAudio.AudioContext (connect, createBufferSource, currentTime, createGain, createAnalyser, decodeAudioDataAsync, destination, makeAudioContext)
-import Audio.WebAudio.Types (AudioContext, AudioBuffer, AudioBufferSourceNode, AnalyserNode, WebAudio)
+import Audio.WebAudio.BaseAudioContext (createBufferSource, currentTime, createGain, createAnalyser, decodeAudioDataAsync, destination, newAudioContext)
+import Audio.WebAudio.Types (AudioContext, AudioBuffer, AudioBufferSourceNode, AnalyserNode, AUDIO, connect)
 import Audio.WebAudio.AudioBufferSourceNode (setBuffer, startBufferSource)
 import Audio.WebAudio.AnalyserNode
 import Audio.WebAudio.Utils (createUint8Buffer)
@@ -60,7 +60,7 @@ type Context =
 
 main:: ∀ eff. Eff
          ( ajax :: AJAX
-         , wau :: WebAudio
+         , audio :: AUDIO
          , canvas :: CANVAS
          , dom :: DOM
          , arrayBuffer :: ARRAY_BUFFER
@@ -71,7 +71,7 @@ main =
 
 configure :: ∀ eff. Aff
          ( ajax :: AJAX
-         , wau :: WebAudio
+         , audio :: AUDIO
          , canvas :: CANVAS
          , dom :: DOM
          , arrayBuffer :: ARRAY_BUFFER
@@ -82,7 +82,7 @@ configure = void $ unsafePartial do
   Just canvas <- liftEff $ getCanvasElementById "canvas"
   Just element <- liftEff $ getElementById (ElementId "app") $ htmlDocumentToNonElementParentNode documentType
   drawCtx <- liftEff $ getContext2D canvas
-  audioCtx <- liftEff $ makeAudioContext
+  audioCtx <- liftEff $ newAudioContext
   buffer <- loadSoundBuffer audioCtx "mp3/chrono.mp3"
   audioNodes <- liftEff $ configureAudio audioCtx buffer
   let
@@ -101,7 +101,7 @@ configure = void $ unsafePartial do
 configureAudio :: ∀ eff.
      AudioContext
   -> AudioBuffer
-  -> Eff (wau :: WebAudio, arrayBuffer :: ARRAY_BUFFER | eff) AudioNodes
+  -> Eff (audio :: AUDIO, arrayBuffer :: ARRAY_BUFFER | eff) AudioNodes
 configureAudio audioCtx buffer =
   do
     src <- createBufferSource audioCtx
@@ -128,7 +128,7 @@ configureAudio audioCtx buffer =
 -- | set up the 'play' button
 playButton :: ∀ eff.
      Context
-  -> Markup (EventListener (dom :: DOM, canvas :: CANVAS, wau :: WebAudio | eff ))
+  -> Markup (EventListener (dom :: DOM, canvas :: CANVAS, audio :: AUDIO | eff ))
 playButton ctx =
   let
     listener =
@@ -209,7 +209,7 @@ drawVisualizerFrame drawCtx freqArray timeDomainArray =
     traverse_ (drawTimeDomainBar drawCtx) (zip indices timeDomains)
 
 -- | continuously update the display
-drawVisualizer :: ∀ eff. Context -> Eff (dom :: DOM, canvas :: CANVAS, wau :: WebAudio | eff) Unit
+drawVisualizer :: ∀ eff. Context -> Eff (dom :: DOM, canvas :: CANVAS, audio :: AUDIO | eff) Unit
 drawVisualizer ctx =
   do
     w <- window
@@ -225,7 +225,7 @@ loadSoundBuffer :: ∀ eff.
   -> String
   -> Aff
      ( ajax :: AJAX
-     , wau :: WebAudio
+     , audio :: AUDIO
      | eff
      )
      AudioBuffer
@@ -235,7 +235,7 @@ loadSoundBuffer ctx fileName = do
   pure buffer
 
 -- | play the tune and display the visualizer
-play :: ∀ eff. Context -> Eff (dom :: DOM, canvas :: CANVAS, wau :: WebAudio | eff) Unit
+play :: ∀ eff. Context -> Eff (dom :: DOM, canvas :: CANVAS, audio :: AUDIO | eff) Unit
 play ctx =
   do
     now <- currentTime ctx.audioCtx
